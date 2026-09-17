@@ -54,6 +54,22 @@ sha256sum integridad.txt
 ```
 
 Modifica un solo caracter y vuelve a calcular los resúmenes. ¿Cómo han cambiado?
+Al modificar un solo carácter del fichero, tanto el resumen MD5 como el SHA-256 cambian completamente.
+
+Antes de modificar el fichero:
+
+* MD5: `68f8d19ba27a3d5f71fb69b0b4bb0b59`
+* SHA-256: `d0272bfa04adeccadef82c488bb8d5b9d83944eefd086540c1840689e436b112`
+
+Después de modificar el contenido:
+
+* MD5: `0b9e494c93e50433c014e24c35f1e156`
+* SHA-256: `4ced1d433f75b40147cc71a4249ef26c68506a3156c5f5db0d3ff08a935df3e7`
+
+Aunque solo se ha añadido ` v2` al final del fichero, los dos valores hash han cambiado completamente. Esto se debe al efecto avalancha de las funciones hash: una pequeña modificación en los datos de entrada produce un resultado hash muy diferente.
+
+Por tanto, los hashes permiten detectar modificaciones en un fichero, ya que si el contenido cambia, su resumen hash también cambia.
+
 
 ## Integridad y esteganografia
 
@@ -65,6 +81,12 @@ sha256sum msg_linus_old
 ```
 
 ¿Coinciden? 
+Los hashes SHA-256 de `msg_linus` y `msg_linus_old` coinciden:
+
+* `msg_linus`: `c3361d1a860a25ca4d2c721463a903ac22db903b381312dd1430df2e390a3439`
+* `msg_linus_old`: `c3361d1a860a25ca4d2c721463a903ac22db903b381312dd1430df2e390a3439`
+
+Por tanto, ambos ficheros tienen exactamente el mismo contenido. Esto confirma que el mensaje extraído mediante `steghide` es idéntico al mensaje original y que no se ha modificado durante el proceso de extracción.
 
 Compara los hashes de los ficheros contenedor:
 
@@ -75,7 +97,62 @@ sha256sum linus_steg.jpg
 
 ¿Coinciden? 
 
-Hay un mensaje importante de Buenaventura Durruti para vosotros en una de las imagenes del directorio `durruti`. El mensaje ha sido introducido mediante el programa steghide, con contraseña "durruti". La imagen que contiene el mensaje se corresponde con el Hash (SHA256) `7d573924d70a604cb56122aed9bded3f40d3083d8adc353a97c0b816c0e573bb`. ¿Qué archivo es? ¿Qué dice la frase? ¿Como automatizarías la búsqueda si tuvieses muchos archivos en carpetas y subcarpetas?
+Los hashes SHA-256 de los ficheros contenedor son diferentes:
+
+* `linus.jpg`: `74d8d0047f89df9542723de8f3463371854ba46ff47d38c7bc034e1aee28b76f`
+* `linus_steg.jpg`: `f0685353f2042e8548fdc4640635f6a6cdc853257ed642807e369211f6dff87b`
+
+Por tanto, los hashes no coinciden. Esto indica que el fichero `linus_steg.jpg` ha sido modificado respecto al original. La modificación se debe a que `steghide` ha introducido el mensaje oculto dentro de la imagen.
+
+
+Hay un mensaje importante de Buenaventura Durruti para vosotros en una de las imagenes del directorio `durruti`. El mensaje ha sido introducido mediante el programa steghide, con contraseña "durruti". La imagen que contiene el mensaje se corresponde con el Hash (SHA256) `7d573924d70a604cb56122aed9bded3f40d3083d8adc353a97c0b816c0e573bb`.
+
+### ¿Qué archivo es?
+
+Se ha buscado el hash SHA-256 proporcionado entre todos los archivos del directorio `durruti` y sus subdirectorios mediante:
+
+```bash
+find . -type f -exec sha256sum {} \; | grep '7d573924d70a604cb56122aed9bded3f40d3083d8adc353a97c0b816c0e573bb'
+```
+
+El resultado ha sido:
+
+```text
+7d573924d70a604cb56122aed9bded3f40d3083d8adc353a97c0b816c0e573bb  ./imagen27.jpg
+```
+
+Por tanto, la imagen que contiene el mensaje oculto es **`imagen27.jpg`**.
+
+### ¿Qué dice la frase?
+
+Se ha extraído el mensaje utilizando `steghide` y la contraseña proporcionada:
+
+```bash
+steghide extract -sf ./imagen27.jpg
+```
+
+El contenido del fichero extraído `frase` es:
+
+> "Al Fascismo no se le discute, se le destruye." Buenaventura Durruti
+
+### ¿Cómo automatizar la búsqueda?
+
+Si hubiese muchos archivos distribuidos en diferentes carpetas y subcarpetas, se podría automatizar la búsqueda utilizando `find` junto con `sha256sum`. Por ejemplo:
+
+```bash
+find . -type f -exec sha256sum {} \; | grep '7d573924d70a604cb56122aed9bded3f40d3083d8adc353a97c0b816c0e573bb'
+```
+
+El comando recorre todos los archivos de forma recursiva, calcula su SHA-256 y filtra el resultado para localizar el hash buscado.
+
+Una vez localizado el archivo, se puede extraer automáticamente el mensaje con:
+
+```bash
+steghide extract -sf ./imagen27.jpg -p "durruti"
+```
+
+De esta forma se puede localizar primero la imagen mediante su hash y posteriormente extraer el mensaje oculto utilizando `steghide`.
+
 
 ## Contraseñas y sal
 
@@ -96,6 +173,18 @@ openssl passwd -6 -salt SAL002 ContrasenaSegura
 ```
 
 ¿Cambian los Hashes?
+Sí, los hashes cambian.
+
+Aunque se utiliza la misma contraseña (`ContrasenaSegura`), se utilizan dos sales diferentes:
+
+```bash
+openssl passwd -6 -salt SAL001 ContrasenaSegura
+openssl passwd -6 -salt SAL002 ContrasenaSegura
+```
+
+Como resultado, se obtienen dos hashes diferentes.
+
+Esto demuestra que la utilización de una **sal (salt)** hace que una misma contraseña produzca hashes distintos cuando se utilizan sales diferentes.
 
 En la carpeta `password_hash_demo` tienes una pequeña aplicación web con tres versiones de la misma funcionalidad:
 
