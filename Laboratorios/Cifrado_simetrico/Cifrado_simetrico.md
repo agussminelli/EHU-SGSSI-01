@@ -90,7 +90,7 @@ sha256sum mensaje.aes.descifrado mensaje.3des.descifrado mensaje.des.descifrado
 
 ¿Que quiere decir CBC en `-des-ede3-cbc`?¿Hay otras opciones?
 
-
+CBC significa Cipher Block Chaining. Es un modo de operación en el que cada bloque se combina con el criptograma del bloque anterior antes de ser cifrado, utilizando un vector de inicialización para el primer bloque. Triple DES también puede utilizar otros modos, como ECB, CFB y OFB, dependiendo de los disponibles en la versión de OpenSSL utilizada
 
 
 
